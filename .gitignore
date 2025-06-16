@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environments
+.env
+.venv
+env/
+venv/
+ENV/
+VENV/
+
+# PyInstaller
+# This prevents the large build artifacts and the final .exe
+# from being committed to the repository. The .exe only belongs in Releases.
+/build/
+/dist/
+*.spec
+
+# IDE / Editor configuration
+.vscode/
+.idea/
+*.swp
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# My Config
+.archive
