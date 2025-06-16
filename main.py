@@ -74,7 +74,7 @@ __version__ = "1.0.0"
 
 # !!! IMPORTANT: EDIT THIS LINE !!!
 # Set this to your public GitHub repository in 'username/repository_name' format.
-GITHUB_REPO = "YOUR_USERNAME/YOUR_REPONAME"
+GITHUB_REPO = "jindalshreyansh/letterhead-merger"
 
 # --- Other Constants ---
 CONFIG_FILE = Path.home() / f".{APP_NAME.lower().replace(' ', '_')}_config.json"
@@ -112,7 +112,16 @@ def log_message(text_widget, message):
     text_widget.config(state="disabled")
 
 
-processed_files = set()
+def has_letterhead_applied(pdf_path: Path) -> bool:
+    try:
+        reader = PdfReader(pdf_path)
+        meta = reader.metadata
+        if meta and meta.producer and meta.producer.strip().startswith(APP_NAME):
+            return True
+    except Exception as e:
+        # Handle corrupt or unreadable PDFs gracefully
+        print(f"[!] Could not read metadata for {pdf_path.name}: {e}")
+    return False
 
 
 def merge_letterhead(
@@ -123,13 +132,16 @@ def merge_letterhead(
     retries: int = 3,
 ):
     log_widget = app_instance.log_text
-    try:
-        if invoice_path.name.endswith(".merged.pdf"):
-            return
-        if str(invoice_path) in processed_files:
-            return
-        processed_files.add(str(invoice_path))
 
+    # The only check needed at the start is the metadata stamp.
+    if has_letterhead_applied(invoice_path):
+        log_message(
+            log_widget, f"[~] Skipped (already has letterhead): {invoice_path.name}"
+        )
+        return
+
+    try:
+        # The global 'processed_files' set and '.merged.pdf' filename check are now removed.
         invoice = PdfReader(str(invoice_path))
         letterhead = PdfReader(str(letterhead_path))
         if len(letterhead.pages) != 1:
@@ -141,6 +153,8 @@ def merge_letterhead(
             merged_page = page
             merged_page.merge_page(header_page)
             writer.add_page(merged_page)
+
+        writer.add_metadata({"/Producer": f"{APP_NAME} v{__version__}"})
 
         temp_path = (
             output_path if output_path else invoice_path.with_suffix(".merged.pdf")
@@ -282,7 +296,7 @@ class PDFMergerApp:
         style = ttk.Style(self.root)
         if THEME_SUPPORT:
             try:
-                self.root.set_theme("arc")
+                self.root.set_theme("yaru")
             except Exception:
                 style.theme_use("clam")
         else:
@@ -587,7 +601,7 @@ class PDFMergerApp:
 # ───── APPLICATION ENTRY POINT ─────
 if __name__ == "__main__":
     if THEME_SUPPORT:
-        root = ThemedTk(theme="arc")
+        root = ThemedTk(theme="yaru")
     else:
         root = Tk()
         print("[!] For a better UI, run: pip install ttkthemes")
