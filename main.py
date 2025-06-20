@@ -47,6 +47,16 @@ try:
 except ImportError:
     THEME_SUPPORT = False
 
+# --- Mutex Singleton ---
+try:
+    import win32api
+    import win32event
+    import winerror
+
+    SINGLE_INSTANCE_SUPPORT = True
+except ImportError:
+    SINGLE_INSTANCE_SUPPORT = False
+
 
 # ───── HELPER FUNCTION FOR PYINSTALLER (Finds bundled files) ─────
 def resource_path(relative_path):
@@ -70,7 +80,7 @@ APP_NAME = "PDF Letterhead Merger"
 # !!! IMPORTANT: UPDATE THIS FOR EACH NEW RELEASE !!!
 # The auto-updater compares this version with the GitHub release tag.
 # Example: For a release tagged 'v1.0.1', this should be "1.0.1".
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 
 # !!! IMPORTANT: EDIT THIS LINE !!!
 # Set this to your public GitHub repository in 'username/repository_name' format.
@@ -81,6 +91,8 @@ CONFIG_FILE = Path.home() / f".{APP_NAME.lower().replace(' ', '_')}_config.json"
 ICON_PATH = resource_path("icon.ico")
 DEBOUNCE_SECONDS = 10
 
+# A unique name for the Mutex. A GUID is used to ensure it's globally unique.
+MUTEX_NAME = "PDFLetterheadMerger_Mutex_9D4F1A2E-2E8A-4B6F-B2E2-7B4A2D8F0A1E"
 
 # ───── CORE APPLICATION LOGIC ─────
 
@@ -600,6 +612,23 @@ class PDFMergerApp:
 
 # ───── APPLICATION ENTRY POINT ─────
 if __name__ == "__main__":
+    # We must keep a reference to the mutex, otherwise it's released
+    mutex = None
+    if SINGLE_INSTANCE_SUPPORT:
+        # Try to create a mutex.
+        mutex = win32event.CreateMutex(None, 1, MUTEX_NAME)
+        last_error = win32api.GetLastError()
+
+        # If the mutex already exists, another instance is running.
+        if last_error == winerror.ERROR_ALREADY_EXISTS:
+            root = Tk()
+            root.withdraw()
+            messagebox.showwarning(
+                APP_NAME,
+                "The application is already running.\n\nPlease check your system tray.",
+            )
+            sys.exit(0)
+
     if THEME_SUPPORT:
         root = ThemedTk(theme="yaru")
     else:
