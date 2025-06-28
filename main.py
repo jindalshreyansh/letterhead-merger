@@ -80,7 +80,7 @@ APP_NAME = "PDF Letterhead Merger"
 # !!! IMPORTANT: UPDATE THIS FOR EACH NEW RELEASE !!!
 # The auto-updater compares this version with the GitHub release tag.
 # Example: For a release tagged 'v1.0.1', this should be "1.0.1".
-__version__ = "2.0.0"
+__version__ = "3.0.0"
 
 # !!! IMPORTANT: EDIT THIS LINE !!!
 # Set this to your public GitHub repository in 'username/repository_name' format.
@@ -298,11 +298,35 @@ class PDFMergerApp:
 
         self.root.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
         add_to_startup()
+        self.validate_paths_on_startup()
         self.update_status()
 
         if self.letterhead_path.get() and self.watch_folder.get():
             self.toggle_watch()
         threading.Thread(target=self.check_for_updates, daemon=True).start()
+
+    def validate_paths_on_startup(self):
+        """Checks if configured paths exist. If not, clears them and notifies the user."""
+        invalid_paths = []
+        letterhead = self.letterhead_path.get()
+        if letterhead and not Path(letterhead).is_file():
+            invalid_paths.append(f"Letterhead file not found:\n{letterhead}")
+            self.letterhead_path.set("")
+            config["letterhead_path"] = ""
+
+        watch_folder = self.watch_folder.get()
+        if watch_folder and not Path(watch_folder).is_dir():
+            invalid_paths.append(f"Watch folder not found:\n{watch_folder}")
+            self.watch_folder.set("")
+            config["watch_folder"] = ""
+
+        if invalid_paths:
+            save_config(config)
+            message = (
+                "One or more of your saved paths could not be found and have been cleared. Please reconfigure them.\n\n"
+                + "\n".join(invalid_paths)
+            )
+            messagebox.showwarning("Configuration Path Error", message)
 
     def setup_styles(self):
         style = ttk.Style(self.root)
